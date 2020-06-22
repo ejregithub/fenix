@@ -9,8 +9,11 @@ package org.mozilla.fenix.ui.robots
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.view.View
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.Espresso.pressBack
+import androidx.test.espresso.UiController
+import androidx.test.espresso.ViewAction
 import androidx.test.espresso.action.ViewActions
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.intent.Intents
@@ -31,6 +34,7 @@ import androidx.test.uiautomator.Until
 import androidx.test.uiautomator.Until.hasObject
 import org.hamcrest.CoreMatchers.allOf
 import org.hamcrest.CoreMatchers.containsString
+import org.hamcrest.Matcher
 import org.junit.Assert.assertTrue
 import org.mozilla.fenix.R
 import org.mozilla.fenix.ext.components
@@ -370,7 +374,26 @@ class BrowserRobot {
 
         fun openTabDrawer(interact: TabDrawerRobot.() -> Unit): TabDrawerRobot.Transition {
             mDevice.waitForIdle(waitingTime)
-            tabsCounter().click()
+            tabsCounter().perform(
+                ViewActions.click(
+                    /* no-op rollback action for when clicks randomly perform a long click, Espresso should attempt to click again
+                    https://issuetracker.google.com/issues/37078920#comment9
+                    */
+                    object : ViewAction {
+                        override fun getDescription(): String {
+                            return "Handle tap->longclick."
+                        }
+
+                        override fun getConstraints(): Matcher<View> {
+                            return ViewMatchers.isAssignableFrom(View::class.java)
+                        }
+
+                        override fun perform(uiController: UiController?, view: View?) {
+                            // do nothing
+                        }
+                    }
+                )
+            )
 
             mDevice.waitNotNull(
                 Until.findObject(By.res("org.mozilla.fenix.debug:id/tab_layout")),
